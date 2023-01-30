@@ -1,0 +1,8 @@
+dirName: "thumbnails"
+
+db:
+  username: "mongo"
+  host: "localhost"
+  port: "27017"
+  dbname: "test1-mongo"
+  default_database: "URLs"
