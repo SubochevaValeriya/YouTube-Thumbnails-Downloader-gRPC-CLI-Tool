@@ -2,6 +2,8 @@
 
 is a CLI tool to download YouTube thumbnails by video URLs.
 
+![Image alt](https://github.com/SubochevaValeriya/gRPC-service-loading-youtube-thumbnails-/blob/dev/server/internal/logo.png)
+
 ### usage: 
 ```
 - client/client.go [flags] URLs (you can input several URLs divided by backspaces)
