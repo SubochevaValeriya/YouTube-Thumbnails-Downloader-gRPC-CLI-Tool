@@ -9,7 +9,7 @@ is a CLI tool to download YouTube thumbnails by video URLs.
 ```
 ### usage examples:
 ```
-go run client/client.go [https://www.youtube.com/yourVideoID]
+go run client/client.go https://www.youtube.com/yourVideoID
 go run client/client.go file urls.txt
 ```
 
