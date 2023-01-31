@@ -1,62 +1,45 @@
-package server
+package main
 
 import (
 	"context"
 	"fmt"
 	grpcYoutubeThumbnails "github.com/SubochevaValeriya/grpcYoutubeThumbnails/proto"
-	"github.com/joho/godotenv"
+	"github.com/SubochevaValeriya/grpcYoutubeThumbnails/server/internal"
+	"github.com/SubochevaValeriya/grpcYoutubeThumbnails/server/internal/repository"
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
-	"go.mongodb.org/mongo-driver/bson/primitive"
-	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/reflection"
-	"google.golang.org/grpc/status"
 	"log"
 	"net"
 	"os"
 	"os/signal"
+	"syscall"
 )
 
 func main() {
+	logrus.Println("Reading configs")
 
-	// configs
 	if err := initConfig(); err != nil {
-		log.Fatalf("error initializing congigs: %s", err.Error())
+		logrus.Fatalf("error initializing configs: %s", err.Error())
 	}
 
-	err := godotenv.Load(".env")
-	if err != nil {
-		log.Fatal("Error loading .env file")
+	dbConfig := repository.MongoConfig{
+		Host:            viper.GetString("db.host"),
+		Port:            viper.GetString("db.port"),
+		DefaultDatabase: viper.GetString("db.default_database"),
+		Collection:      viper.GetString("db.collection"),
 	}
 
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = defaultPort
-	}
+	logrus.Println("Connecting to MongoDB")
 
-	mongoURl := os.Getenv("MONGODB_URL")
-
-	// if we crash the go code, we get the file name and line number
-	log.SetFlags(log.LstdFlags | log.Lshortfile)
-
-	fmt.Println("Connecting to MongoDB")
-
-	client, err := mongo.NewClient(options.Client().ApplyURI(mongoURl))
+	client, err := repository.MongoConnection(dbConfig)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	err = client.Connect(context.TODO())
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	fmt.Println("Pokemon Service Started")
-	collection = client.Database("videos-db").Collection("videos")
-
-	lis, err := net.Listen("tcp", "0.0.0.0:4041")
+	logrus.Println("Starting Service...")
+	lis, err := net.Listen("tcp", fmt.Sprintf("%s:%s", viper.GetString("host"), viper.GetString("port")))
 	if err != nil {
 		log.Fatalf("Failed to listen: %v", err)
 	}
@@ -65,93 +48,83 @@ func main() {
 	s := grpc.NewServer(opts...)
 
 	grpcYoutubeThumbnails.RegisterYoutubeThumbnailsServiceServer(s, &server{})
-	// Register reflection service on gRPC server.
 	reflection.Register(s)
 
+	logrus.Println("Service started.")
 	go func() {
-		fmt.Println("Starting Server...")
+		logrus.Println("Service is waiting for requests...")
 		if err := s.Serve(lis); err != nil {
 			log.Fatalf("failed to serve: %v", err)
 		}
 	}()
 
-	// Wait for Control C to exit
+	// Graceful shutdown
 	ch := make(chan os.Signal, 1)
-	signal.Notify(ch, os.Interrupt)
+	signal.Notify(ch, syscall.SIGINT)
 
-	// Block until a signal is received
 	<-ch
-	// First we close the connection with MongoDB:
+	// Closing connection with DB and stopping the server
+	fmt.Println()
 	fmt.Println("Closing MongoDB Connection")
 	if err := client.Disconnect(context.TODO()); err != nil {
-		log.Fatalf("Error on disconnection with MongoDB : %v", err)
+		log.Fatalf("Error on closing connection with MongoDB : %v", err)
 	}
-
-	// Finally, we stop the server
 	fmt.Println("Stopping the server")
 	s.Stop()
 	fmt.Println("End of Program")
 }
 
-const defaultPort = "4041"
-
-var collection *mongo.Collection
-
 type server struct {
 	grpcYoutubeThumbnails.YoutubeThumbnailsServiceServer
-}
-
-type videoItem struct {
-	ID            primitive.ObjectID `bson:"_id,omitempty"`
-	VideoID       string             `bson:"video_id"`
-	Name          string             `bson:"name"`
-	ThumbnailLink string             `bson:"thumbnail_link"`
-}
-
-func getVideoData(data *videoItem) *grpcYoutubeThumbnails.Video {
-	return &grpcYoutubeThumbnails.Video{
-		Id:            data.ID.Hex(),
-		Link:          data.ThumbnailLink,
-		ThumbnailLink: data.ThumbnailLink,
-	}
-}
-
-func (*server) LoadThumbnailLink(ctx context.Context, req *grpcYoutubeThumbnails.LoadThumbnailLinkRequest) (*grpcYoutubeThumbnails.LoadThumbnailLinkResponse, error) {
-	log.Println("Load thumbnail")
-	pokemon := req.GetVideo()
-	data := videoItem{
-		VideoID:       pokemon.GetId(),
-		Name:          pokemon.GetLink(),
-		ThumbnailLink: pokemon.GetThumbnailLink(),
-	}
-
-	res, err := collection.InsertOne(ctx, data)
-	if err != nil {
-		return nil, status.Errorf(
-			codes.Internal,
-			fmt.Sprintf("Internal error: %v", err),
-		)
-	}
-
-	oid, ok := res.InsertedID.(primitive.ObjectID)
-	if !ok {
-		return nil, status.Errorf(
-			codes.Internal,
-			fmt.Sprintf("Cannot convert to OID"),
-		)
-	}
-	return &grpcYoutubeThumbnails.LoadThumbnailLinkResponse{
-		Video: &grpcYoutubeThumbnails.Video{
-			Id: oid.Hex(),
-			//Pid:         pokemon.GetPid(),
-			Link:          pokemon.GetLink(),
-			ThumbnailLink: pokemon.GetThumbnailLink(),
-		},
-	}, nil
 }
 
 func initConfig() error {
 	viper.AddConfigPath("configs")
 	viper.SetConfigName("config")
 	return viper.ReadInConfig()
+}
+
+func (s *server) DownloadThumbnail(ctx context.Context, req *grpcYoutubeThumbnails.DownloadThumbnailLinkRequest) (*grpcYoutubeThumbnails.DownloadThumbnailLinkResponse, error) {
+	video := internal.VideoItem{}
+	err := video.FindVideoID(req.URL)
+	if err != nil {
+		return &grpcYoutubeThumbnails.DownloadThumbnailLinkResponse{Response: "Please try to use different URL"}, err
+	}
+
+	data, err := repository.FindVideoByID(ctx, video.VideoID)
+	if err == nil {
+		logrus.Printf("Found in the cash")
+	} else {
+		logrus.Printf("Not found in the cash")
+		data = &video
+		data.FindTitle(req.URL)
+
+		if data.FindThumbnailLink() != nil {
+			return &grpcYoutubeThumbnails.DownloadThumbnailLinkResponse{Response: fmt.Sprintf("Can't find thumbnail link")}, err
+		}
+
+		err = repository.CreateVideoItem(ctx, data)
+
+		if err != nil {
+			logrus.Printf("Can't add data to DB: %v", err)
+		}
+	}
+
+	log.Println("Download thumbnail")
+
+	if internal.CreateFolder() != nil {
+		return &grpcYoutubeThumbnails.DownloadThumbnailLinkResponse{Response: fmt.Sprintf("Can't create directory for thumbnails")}, err
+	}
+
+	response, err := data.GetImage()
+
+	if err != nil {
+		return &grpcYoutubeThumbnails.DownloadThumbnailLinkResponse{Response: fmt.Sprintf("Can't get image by URL: %s", data.ThumbnailLink)}, err
+	}
+
+	if internal.SaveThumbnail(data.Name, response) != nil {
+		return &grpcYoutubeThumbnails.DownloadThumbnailLinkResponse{Response: fmt.Sprintf("Can't download image: %s", data.ThumbnailLink)}, err
+	}
+
+	return &grpcYoutubeThumbnails.DownloadThumbnailLinkResponse{Response: "Downloaded successfully"}, nil
 }
