@@ -1,4 +1,4 @@
-package server
+package internal
 
 import (
 	"fmt"
@@ -8,7 +8,7 @@ import (
 )
 
 func TestCreateFolder(t *testing.T) {
-	err := createFolder("thumbnails")
+	err := CreateFolder()
 	if err != nil {
 		t.Fatal()
 	}
@@ -24,7 +24,7 @@ func TestSaveThumbnail(t *testing.T) {
 	if err != nil {
 		t.Fatal()
 	}
-	err = saveThumbnail("one.jpg", resp)
+	err = SaveThumbnail("one.jpg", resp)
 	if err != nil {
 		t.Fatal()
 	}
