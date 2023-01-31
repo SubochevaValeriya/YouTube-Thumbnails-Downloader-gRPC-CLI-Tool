@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"flag"
 	"fmt"
 	grpcYoutubeThumbnails "github.com/SubochevaValeriya/grpcYoutubeThumbnails/proto"
@@ -36,29 +37,42 @@ func main() {
 		return
 	}
 
-	YouTubeLink := os.Args[1]
-	//flag.String("YouTubeLink", "", "URL which thumbnail you want to download")
-	async := flag.Bool("async", false, "flags for the program to run asynchronously")
+	async := flag.Bool("async", false, "flag for the program to run asynchronously")
 	help := flag.Bool("help", false, "help")
 
 	flag.Usage = func() {
 		fmt.Fprintln(os.Stderr, usageMessage)
 	}
 	flag.Parse()
+
 	if *help {
 		fmt.Printf(helpMessage)
 	}
-	fmt.Println(async)
-	fmt.Println(YouTubeLink)
 
-	downloadThumbnailRes, err := c.DownloadThumbnail(context.Background(), &grpcYoutubeThumbnails.DownloadThumbnailLinkRequest{URL: YouTubeLink})
+	if os.Args[1] == "file" {
+		file, err := os.Open(os.Args[2])
+		if err != nil {
+			log.Fatal("Can't open file")
+		}
+		//defer file.Close()
 
-	//resp, err := c.DownloadThumbnail(context.Background(), &grpcYoutubeThumbnails.DownloadThumbnailLinkRequest{URL: link})
-	if err != nil {
-		log.Fatalf("Unexpected error: %v", err)
+		scanner := bufio.NewScanner(file)
+
+		for scanner.Scan() {
+
+			sendRequest(c, scanner.Text())
+		}
+		return
 	}
-	fmt.Println("Downloading video thumbnail...")
-	fmt.Println(downloadThumbnailRes.Response)
+
+	for i := 1; i < len(os.Args); i++ {
+		YouTubeLink := os.Args[i]
+		sendRequest(c, YouTubeLink)
+
+	}
+
+	fmt.Println(async)
+
 }
 
 func initConfig() error {
@@ -67,14 +81,34 @@ func initConfig() error {
 	return viper.ReadInConfig()
 }
 
+func sendRequest(c grpcYoutubeThumbnails.YoutubeThumbnailsServiceClient, YouTubeLink string) {
+	downloadThumbnailRes, err := c.DownloadThumbnail(context.Background(), &grpcYoutubeThumbnails.DownloadThumbnailLinkRequest{URL: YouTubeLink})
+
+	if err != nil {
+		log.Fatalf("Unexpected error: %v", err)
+	}
+	fmt.Println("Downloading video thumbnail...")
+	fmt.Println(downloadThumbnailRes.Response)
+}
+
 const usageMessage = `Please try to input YouTubeLink as a parameter:
 go run client/client.go [https://www.youtube.com/yourVideoID]
-or use flag -h`
+or use flag -help`
 
 const helpMessage = `Youtube Thumbnails Downloader is a CLI tool to download YouTube thumbnails by video URLs.
+You can input several URLs divided by backspaces.
 
-usage: client/client.go [flags] URLs
-  options:
-    -h, --help     Does something
-    -a, --async    Does something with "required"
+usage: client/client.go [flags] URLs OR client/client.go file name.ext
+
+usageExamples:
+go run client/client.go [https://www.youtube.com/yourVideoID]
+go run client/client.go file urls.txt
+
+  commands:
+	
+file name.ext
+
+  flags:
+    --help     Show this help message
+    --async    Flag for the program to run asynchronously
 `
