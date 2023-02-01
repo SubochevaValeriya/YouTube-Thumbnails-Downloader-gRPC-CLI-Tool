@@ -4,7 +4,7 @@ services:
   youtube-thumbnails-downloader:
     build: ./
     ports:
-      - "8003:8003"
+      - "9080:9080"
     depends_on:
       - db
     environment:
