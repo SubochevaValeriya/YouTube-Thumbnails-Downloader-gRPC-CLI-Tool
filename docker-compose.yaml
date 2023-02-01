@@ -1,0 +1,20 @@
+version: '3.9'
+
+services:
+  youtube-thumbnails-downloader:
+    build: ./
+    ports:
+      - "9080:9080"
+    depends_on:
+      - db
+    environment:
+      - host=db
+      - DB_PASSWORD=qwerty
+
+  db:
+    restart: always
+    image: mongo:latest
+    volumes:
+      - ./.database/mongo/data:/var/lib/mongo/data
+    ports:
+      - "27017:27017"

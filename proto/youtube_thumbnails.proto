@@ -1,0 +1,29 @@
+syntax = "proto3";
+
+package proto;
+
+option go_package = "github.com/SubochevaValeriya/gRPC-service-downloading-youtube-thumbnails;grpcYoutubeThumbnails";
+
+message Video {
+  string id = 1;
+  string name = 2;
+  string videoId = 3;
+  string thumbnailLink = 4;
+}
+
+message Response {
+  string name = 1;
+  bytes image = 2;
+}
+message DownloadThumbnailLinkRequest {
+  string URL = 1;
+}
+
+message DownloadThumbnailLinkResponse {
+  Response response = 1;
+}
+
+service YoutubeThumbnailsService {
+  rpc DownloadThumbnail (DownloadThumbnailLinkRequest) returns (DownloadThumbnailLinkResponse);
+}
+//protoc --go_out=. --go_opt=paths=source_relative --go-grpc_out=. --go-grpc_opt=paths=source_relative proto/youtube_thumbnails.proto

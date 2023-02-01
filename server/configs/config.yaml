@@ -1,0 +1,12 @@
+directory_name: "thumbnails-test"
+host: "0.0.0.0"
+port: "9080"
+
+db:
+  username: "mongo"
+  host: "localhost"
+  port: "27017"
+  url: "test1-mongo"
+  default_database: "videos-db"
+  test_database: "videos-db-test"
+  collection: "videos"
