@@ -7,6 +7,6 @@ COPY ./ ./
 
 # build go app
 RUN go mod download
-RUN go build -o shortener-app ./cmd/main.go
+RUN go build -o youtube-thumbnails-downloader ./server/server.go
 
-CMD ["./YouTube-Thumbnails-Downloader"]
+CMD ["./youtube-thumbnails-downloader"]
