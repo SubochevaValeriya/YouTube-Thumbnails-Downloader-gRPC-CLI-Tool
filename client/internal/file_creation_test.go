@@ -2,6 +2,7 @@ package internal
 
 import (
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 	"testing"
@@ -24,13 +25,21 @@ func TestSaveThumbnail(t *testing.T) {
 	if err != nil {
 		t.Fatal()
 	}
-	err = SaveThumbnail("one.jpg", resp)
+
+	image, err := io.ReadAll(resp.Body)
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	err = SaveThumbnail("one", image)
 	if err != nil {
 		t.Errorf("file not found")
 	}
 
-	if _, err := os.Stat("one"); os.IsNotExist(err) {
+	if _, err := os.Stat("one.jpg"); os.IsNotExist(err) {
 		fmt.Println(err)
 		t.Errorf("file not found")
 	}
+
+	os.RemoveAll("one.jpg")
 }
