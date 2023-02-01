@@ -1,8 +1,6 @@
-directory_name: "thumbnails"
+directory_name: "thumbnails-test"
 host: "0.0.0.0"
 port: "9080"
-drop_cache: "yes"
-dst: "stdout"
 
 db:
   username: "mongo"
