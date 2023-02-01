@@ -98,7 +98,8 @@ func downloadingThumbnailRequest(client grpcYoutubeThumbnails.YoutubeThumbnailsS
 		if err != nil {
 			log.Fatal("Can't open file")
 		}
-		//defer file.Close()
+
+		defer file.Close()
 
 		scanner := bufio.NewScanner(file)
 
