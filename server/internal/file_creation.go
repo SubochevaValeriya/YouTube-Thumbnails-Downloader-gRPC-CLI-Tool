@@ -25,7 +25,6 @@ func CreateFolder() error {
 func SaveThumbnail(name string, resp *http.Response) error {
 
 	fileName := filepath.Base(fmt.Sprintf("%s.jpg", name))
-
 	createdFile, err := os.Create(filepath.Join(viper.GetString("directory_name"), fileName))
 	if err != nil {
 		log.Println(err)
@@ -39,4 +38,10 @@ func SaveThumbnail(name string, resp *http.Response) error {
 	}
 
 	return nil
+}
+
+// DeleteFolder removes folder and all thumbnails in it
+func DeleteFolder() error {
+
+	return os.RemoveAll(viper.GetString("directory_name"))
 }

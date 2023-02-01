@@ -26,11 +26,11 @@ func TestSaveThumbnail(t *testing.T) {
 	}
 	err = SaveThumbnail("one.jpg", resp)
 	if err != nil {
-		t.Fatal()
+		t.Errorf("file not found")
 	}
 
 	if _, err := os.Stat("one"); os.IsNotExist(err) {
 		fmt.Println(err)
-		t.Fatal()
+		t.Errorf("file not found")
 	}
 }

@@ -46,3 +46,8 @@ func CreateVideoItem(ctx context.Context, data *internal.VideoItem) error {
 
 	return err
 }
+
+func DropCollection(ctx context.Context) error {
+	err := collection.Drop(ctx)
+	return err
+}
