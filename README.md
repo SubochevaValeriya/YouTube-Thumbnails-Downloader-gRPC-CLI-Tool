@@ -2,7 +2,7 @@
 
 is a CLI tool to download YouTube thumbnails by video URLs.
 
-![Image alt](https://github.com/SubochevaValeriya/gRPC-service-loading-youtube-thumbnails-/blob/dev/server/internal/logo.png)
+![Image alt](https://github.com/SubochevaValeriya/gRPC-service-loading-youtube-thumbnails-/blob/dev/server/internal/logo/forlogo.gif)
 
 ### usage: 
 ```
@@ -32,39 +32,3 @@ make build && make run
 ```
 
 **Used:** *gRPC, MongoDB, docker-compose.*
-
-// собрать всю логику вместе
-запуск сервера и бд (можно в отдельных функциях)
-
-затем по запросу ищем в бд
-не находим - делаем все шаги
-находим - просто грузим по ссылке
-
-// добавить логирование где нужно
-
-// конфиг файл отредактировать
-
-// кли программа
-флаги
-
--h - хэлп
-
---async - добавить запуск в горутинах с блоком (мьютекс?)
-
-как принимаем URL?
-
-списком
-файлом 
-по одному?
-
-
--- больше тестов 
--- тест общий по запуску
--- async сделать
-надо делать с мьютексом запись
-посмотреть как это вообще
-
--- проверить докер
--- гитхаб экшенс
--- логи посмотреть еще
-
