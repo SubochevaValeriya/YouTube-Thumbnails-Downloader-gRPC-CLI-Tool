@@ -2,8 +2,8 @@ package main
 
 import (
 	"errors"
+	"github.com/SubochevaValeriya/grpcYoutubeThumbnails/client/internal"
 	grpcYoutubeThumbnails "github.com/SubochevaValeriya/grpcYoutubeThumbnails/proto"
-	"github.com/SubochevaValeriya/grpcYoutubeThumbnails/server/internal"
 	"github.com/SubochevaValeriya/grpcYoutubeThumbnails/server/internal/repository"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"

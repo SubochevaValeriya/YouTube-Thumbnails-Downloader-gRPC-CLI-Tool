@@ -5,6 +5,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"github.com/SubochevaValeriya/grpcYoutubeThumbnails/client/internal"
 	grpcYoutubeThumbnails "github.com/SubochevaValeriya/grpcYoutubeThumbnails/proto"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
@@ -27,6 +28,7 @@ func main() {
 		return
 	}
 
+	internal.CreateFolder()
 	// downloading video thumbnail
 
 	wg := &sync.WaitGroup{}
@@ -143,7 +145,11 @@ func sendRequest(c grpcYoutubeThumbnails.YoutubeThumbnailsServiceClient, YouTube
 		return
 	}
 
-	write("%s\n", downloadThumbnailRes.Response)
+	err = internal.SaveThumbnail(downloadThumbnailRes.Response.Name, downloadThumbnailRes.Response.Image)
+	if err != nil {
+		fmt.Printf("%v", err)
+	}
+	write("%s\n", "Downloaded Successfully")
 }
 
 const usageMessage = `Please try to input YouTubeLink as a parameter:

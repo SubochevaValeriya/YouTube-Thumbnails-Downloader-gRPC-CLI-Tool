@@ -23,7 +23,7 @@ func TestFindIndex(t *testing.T) {
 		{URL: "https://www.youtube.com/watch?v=6o1m7ofjCCY", Expected: "6o1m7ofjCCY", ExpectedError: false},
 		{URL: "http://youtube.com/watch?vi=dQw4w9WgXcQ&feature=youtube_gdata_player", Expected: "dQw4w9WgXcQ", ExpectedError: false},
 		{URL: "help", Expected: "", ExpectedError: true},
-		{URL: "", Expected: "", ExpectedError: true},
+		{URL: "itsNotCorre", Expected: "", ExpectedError: true},
 	}
 
 	for _, cse := range testCases {

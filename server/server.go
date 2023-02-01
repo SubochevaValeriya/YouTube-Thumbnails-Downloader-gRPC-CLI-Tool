@@ -6,10 +6,12 @@ import (
 	grpcYoutubeThumbnails "github.com/SubochevaValeriya/grpcYoutubeThumbnails/proto"
 	"github.com/SubochevaValeriya/grpcYoutubeThumbnails/server/internal"
 	"github.com/SubochevaValeriya/grpcYoutubeThumbnails/server/internal/repository"
+	"github.com/joho/godotenv"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
+	"io"
 	"log"
 	"net"
 	"os"
@@ -24,8 +26,13 @@ func main() {
 		logrus.Fatalf("error initializing configs: %s", err.Error())
 	}
 
+	// environmental variables
+	if err := godotenv.Load(); err != nil {
+		logrus.Fatalf("error loading env variables: %s", err.Error())
+	}
+
 	dbConfig := repository.MongoConfig{
-		Host:            viper.GetString("db.host"),
+		Host:            os.Getenv("host"),
 		Port:            viper.GetString("db.port"),
 		DefaultDatabase: viper.GetString("db.default_database"),
 		Collection:      viper.GetString("db.collection"),
@@ -101,8 +108,10 @@ func initConfig() error {
 func (s *server) DownloadThumbnail(ctx context.Context, req *grpcYoutubeThumbnails.DownloadThumbnailLinkRequest) (*grpcYoutubeThumbnails.DownloadThumbnailLinkResponse, error) {
 	video := internal.VideoItem{}
 	err := video.FindVideoID(req.URL)
+
+	// incorrect URL
 	if err != nil {
-		return &grpcYoutubeThumbnails.DownloadThumbnailLinkResponse{Response: "Please try to use different URL"}, err
+		return &grpcYoutubeThumbnails.DownloadThumbnailLinkResponse{Response: nil}, err
 	}
 
 	data, err := repository.FindVideoByID(ctx, video.VideoID)
@@ -113,8 +122,9 @@ func (s *server) DownloadThumbnail(ctx context.Context, req *grpcYoutubeThumbnai
 		data = &video
 		data.FindTitle(req.URL)
 
+		// Can't find thumbnail link
 		if data.FindThumbnailLink() != nil {
-			return &grpcYoutubeThumbnails.DownloadThumbnailLinkResponse{Response: fmt.Sprintf("Can't find thumbnail link")}, err
+			return &grpcYoutubeThumbnails.DownloadThumbnailLinkResponse{Response: nil}, err
 		}
 
 		err = repository.CreateVideoItem(ctx, data)
@@ -125,19 +135,24 @@ func (s *server) DownloadThumbnail(ctx context.Context, req *grpcYoutubeThumbnai
 	}
 	logrus.Printf("Downloaded thumbnail for URL: %s", req.URL)
 
-	if internal.CreateFolder() != nil {
-		return &grpcYoutubeThumbnails.DownloadThumbnailLinkResponse{Response: fmt.Sprintf("Can't create directory for thumbnails")}, err
-	}
+	res, err := data.GetImage()
 
-	response, err := data.GetImage()
-
+	// Can't get image by URL
 	if err != nil {
-		return &grpcYoutubeThumbnails.DownloadThumbnailLinkResponse{Response: fmt.Sprintf("Can't get image by URL: %s", data.ThumbnailLink)}, err
+		return &grpcYoutubeThumbnails.DownloadThumbnailLinkResponse{Response: nil}, err
 	}
 
-	if internal.SaveThumbnail(data.Name, response) != nil {
-		return &grpcYoutubeThumbnails.DownloadThumbnailLinkResponse{Response: fmt.Sprintf("Can't download image: %s", data.ThumbnailLink)}, err
+	// Can't download image
+	image, err := io.ReadAll(res.Body)
+	if err != nil {
+		return &grpcYoutubeThumbnails.DownloadThumbnailLinkResponse{Response: nil}, err
+	}
+	// Downloaded successfully
+
+	response := grpcYoutubeThumbnails.Response{
+		Name:  fmt.Sprintf("%s ID%s", data.Name, data.VideoID),
+		Image: image,
 	}
 
-	return &grpcYoutubeThumbnails.DownloadThumbnailLinkResponse{Response: "Downloaded successfully"}, nil
+	return &grpcYoutubeThumbnails.DownloadThumbnailLinkResponse{Response: &response}, nil
 }

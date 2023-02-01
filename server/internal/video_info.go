@@ -24,6 +24,18 @@ var incorrectFormatError = errors.New("incorrect URL format")
 // FindVideoID function finds ID of YouTube video in the link
 func (video *VideoItem) FindVideoID(URL string) error {
 	// regular expression to find YouTube video ID:
+
+	matched, err := regexp.MatchString(`(?:\\/|%3D|v=|vi=)([0-9A-z-_]{11})(?:[%#?&]|$)`, URL)
+	if err != nil || !matched {
+		logrus.WithFields(
+			logrus.Fields{
+				"package":  "internal",
+				"function": "FindVideoID",
+				"error":    err,
+				"data":     URL,
+			}).Errorf("Incorrect format for URL: %s", URL)
+		return incorrectFormatError
+	}
 	re, err := regexp.Compile(`([0-9A-z-_]{11})`)
 
 	if err != nil || len(re.FindString(URL)) != 11 {
