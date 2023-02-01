@@ -21,7 +21,7 @@ go run client/client.go --async file urls.txt
 
 ### flags:
 ```
---help     Show this help message
+--help     Show help message
 --async    Flag for the program to run asynchronously
 ```  
 
