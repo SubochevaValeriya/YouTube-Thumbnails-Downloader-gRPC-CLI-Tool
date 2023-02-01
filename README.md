@@ -7,12 +7,12 @@ is a CLI tool to download YouTube thumbnails by video URLs.
 ### usage: 
 ```
 - client/client.go [flags] URLs (you can input several URLs divided by backspaces)
-- client/client.go file name.ext 
+- client/client.go [flags] file name.ext 
 ```
 ### usage examples:
 ```
 go run client/client.go https://www.youtube.com/yourVideoID
-go run client/client.go file urls.txt
+go run client/client.go --async file urls.txt
 ```
 
 ### commands:
