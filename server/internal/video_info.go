@@ -73,7 +73,7 @@ func (video *VideoItem) FindTitle(URL string) error {
 
 	pageTitle := []byte(pageContent[titleStartIndex:titleEndIndex])
 
-	video.Name = string(pageTitle)
+	video.Name = strings.TrimRight(string(pageTitle), "  - YouTube")
 	return nil
 }
 
@@ -105,9 +105,7 @@ func (video *VideoItem) FindThumbnailLink() error {
 }
 
 func (video *VideoItem) GetImage() (*http.Response, error) {
-	fmt.Println(video.ThumbnailLink)
 	res, err := http.Get(video.ThumbnailLink)
-
 	if err != nil {
 		logrus.WithFields(
 			logrus.Fields{
