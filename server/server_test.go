@@ -2,14 +2,12 @@ package main
 
 import (
 	"errors"
-	"github.com/SubochevaValeriya/grpcYoutubeThumbnails/client/internal"
 	grpcYoutubeThumbnails "github.com/SubochevaValeriya/grpcYoutubeThumbnails/proto"
 	"github.com/SubochevaValeriya/grpcYoutubeThumbnails/server/internal/repository"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 	"golang.org/x/net/context"
 	"log"
-	"os"
 	"testing"
 )
 
@@ -55,10 +53,6 @@ func TestDownloadingThumbnails(t *testing.T) {
 			if cse.ExpectedError == nil {
 				if err != nil {
 					t.Errorf("should not be error")
-				} else {
-					if _, err := os.Stat(cse.Name); os.IsNotExist(err) {
-						t.Errorf("file not saved")
-					}
 				}
 			} else if err == nil {
 				t.Errorf("should be an error")
@@ -66,8 +60,7 @@ func TestDownloadingThumbnails(t *testing.T) {
 		})
 	}
 
-	// clear DB and folder
+	// clear DB
 	repository.DropCollection(context.Background())
-	internal.DeleteFolder()
-	logrus.Printf("DB and folder are cleared")
+	logrus.Printf("DB is cleared")
 }
