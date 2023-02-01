@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package proto;
 
-option go_package = "github.com/SubochevaValeriya/gRPC-service-downloading-youtube-thumbnails;pokemonpc";
+option go_package = "github.com/SubochevaValeriya/gRPC-service-downloading-youtube-thumbnails;package grpcYoutubeThumbnails";
 
 message Video {
   string id = 1;
