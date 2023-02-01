@@ -1,8 +1,8 @@
 build:
-	docker-compose build YouTube-Thumbnails-Downloader
+	docker-compose build youtube-thumbnails-downloader
 
 run:
-	docker-compose up YouTube-Thumbnails-Downloader
+	docker-compose up youtube-thumbnails-downloader
 
 test:
 	go test -v ./...
