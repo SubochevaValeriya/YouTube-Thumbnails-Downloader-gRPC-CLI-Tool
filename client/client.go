@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"errors"
 	"flag"
 	"fmt"
 	grpcYoutubeThumbnails "github.com/SubochevaValeriya/grpcYoutubeThumbnails/proto"
@@ -10,12 +11,40 @@ import (
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
+	"io"
 	"log"
 	"os"
+	"strconv"
+	"sync"
 )
 
 func main() {
 
+	cc, client := startingServer()
+	defer cc.Close()
+
+	async, args, err := flagsAndCommands()
+
+	if err != nil {
+		return
+	}
+
+	// downloading video thumbnail
+
+	wg := &sync.WaitGroup{}
+	downloadingThumbnailRequest(client, async, args, wg)
+	wg.Wait()
+}
+
+// initialization of config
+func initConfig() error {
+	viper.AddConfigPath("configs")
+	viper.SetConfigName("config")
+	return viper.ReadInConfig()
+}
+
+// starting the server
+func startingServer() (*grpc.ClientConn, grpcYoutubeThumbnails.YoutubeThumbnailsServiceClient) {
 	if err := initConfig(); err != nil {
 		logrus.Fatalf("error initializing configs: %s", err.Error())
 	}
@@ -26,31 +55,46 @@ func main() {
 	if err != nil {
 		logrus.Fatalf("could not connect: %v", err)
 	}
-	defer cc.Close() //
 
-	c := grpcYoutubeThumbnails.NewYoutubeThumbnailsServiceClient(cc)
+	return cc, grpcYoutubeThumbnails.NewYoutubeThumbnailsServiceClient(cc)
+}
 
-	// loading video thumbnail
-
-	if len(os.Args) == 1 {
-		fmt.Printf(helpMessage)
-		return
-	}
-
+// parsing flags, commands and parameters
+func flagsAndCommands() (*bool, []string, error) {
 	async := flag.Bool("async", false, "flag for the program to run asynchronously")
-	help := flag.Bool("help", false, "help")
+	help := flag.Bool("help", false, "help message")
 
 	flag.Usage = func() {
 		fmt.Fprintln(os.Stderr, usageMessage)
 	}
+
 	flag.Parse()
 
-	if *help {
-		fmt.Printf(helpMessage)
+	if len(os.Args) == 1 {
+		write("%s", helpMessage)
+		return async, os.Args, errors.New("parameter not found")
 	}
 
-	if os.Args[1] == "file" {
-		file, err := os.Open(os.Args[2])
+	if *help {
+		write("%s", helpMessage)
+		return async, os.Args, errors.New("help message only")
+	}
+
+	return async, os.Args, nil
+}
+
+// making request
+func downloadingThumbnailRequest(client grpcYoutubeThumbnails.YoutubeThumbnailsServiceClient, async *bool, args []string, wg *sync.WaitGroup) {
+	var argI = 1
+	if *async {
+		argI = 2
+		write("%s\n", "-- Working in Async mode --")
+	}
+
+	// URLs from file (command "file")
+
+	if args[argI] == "file" {
+		file, err := os.Open(args[argI+1])
 		if err != nil {
 			log.Fatal("Can't open file")
 		}
@@ -59,56 +103,102 @@ func main() {
 		scanner := bufio.NewScanner(file)
 
 		for scanner.Scan() {
-
-			sendRequest(c, scanner.Text())
+			YouTubeLink := scanner.Text()
+			asyncWork(client, async, YouTubeLink, wg)
 		}
 		return
+	} else { // URLs from parameters
+		for i := argI; i < len(os.Args); i++ {
+			YouTubeLink := args[i]
+			asyncWork(client, async, YouTubeLink, wg)
+		}
 	}
-
-	for i := 1; i < len(os.Args); i++ {
-		YouTubeLink := os.Args[i]
-		sendRequest(c, YouTubeLink)
-
-	}
-
-	fmt.Println(async)
-
 }
 
-func initConfig() error {
-	viper.AddConfigPath("configs")
-	viper.SetConfigName("config")
-	return viper.ReadInConfig()
+// writing message to console or other destination
+func write(format string, message string) {
+	dst := os.Stdout // can be changed also using config variables
+	fmt.Fprintf(dst, format, message)
 }
 
+// determination in which mode to start downloading: async or not
+func asyncWork(client grpcYoutubeThumbnails.YoutubeThumbnailsServiceClient, async *bool, YouTubeLink string, wg *sync.WaitGroup) {
+	if *async {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			sendRequest(client, YouTubeLink)
+		}()
+	} else {
+		sendRequest(client, YouTubeLink)
+	}
+}
+
+// sending request to the server
 func sendRequest(c grpcYoutubeThumbnails.YoutubeThumbnailsServiceClient, YouTubeLink string) {
 	downloadThumbnailRes, err := c.DownloadThumbnail(context.Background(), &grpcYoutubeThumbnails.DownloadThumbnailLinkRequest{URL: YouTubeLink})
 
+	write("%s: ", YouTubeLink)
 	if err != nil {
-		log.Fatalf("Unexpected error: %v", err)
+		fmt.Printf("Unexpected error: %v\n", err)
+		//testChanErr <- err
+		return
 	}
-	fmt.Println("Downloading video thumbnail...")
-	fmt.Println(downloadThumbnailRes.Response)
+
+	write("%s\n", downloadThumbnailRes.Response)
 }
+
+func runForTest(in io.Reader, out io.Writer) {
+	scanner := bufio.NewScanner(in)
+
+	for scanner.Scan() {
+		if scanner.Text() == "STOP" || scanner.Text() == "stop" {
+			break
+		}
+		fmt.Println(scanner.Text())
+		n, err := strconv.ParseInt(scanner.Text(), 10, 64)
+
+		if err == nil {
+			fmt.Printf("Number formatted: %d\n", n)
+		} else {
+			fmt.Println(err.Error())
+		}
+	}
+}
+
+//func readFRom() {
+//	a := <-testChan
+//	fmt.Println(a + "from ch")
+//}
+//
+//var testChan chan string
+//var testChanErr chan error
 
 const usageMessage = `Please try to input YouTubeLink as a parameter:
 go run client/client.go [https://www.youtube.com/yourVideoID]
-or use flag -help`
+or use flag --help`
 
-const helpMessage = `Youtube Thumbnails Downloader is a CLI tool to download YouTube thumbnails by video URLs.
-You can input several URLs divided by backspaces.
+const helpMessage = `
+YOUTUBE THUMBNAILS DOWNLOADER 
 
-usage: client/client.go [flags] URLs OR client/client.go file name.ext
+Description:
+Youtube Thumbnails Downloader is a CLI tool to download YouTube thumbnails by video URLs.
+You can input several URLs divided by backspaces or load links from file.
 
-usageExamples:
-go run client/client.go [https://www.youtube.com/yourVideoID]
+  Usage: 
+client/client.go [flags] URLs 
+client/client.go [flags] file name.ext
+
+  Usage Examples:
+go run client/client.go https://www.youtube.com/yourVideoID
 go run client/client.go file urls.txt
+go run client/client.go --async file urls.txt
 
-  commands:
+  Commands:
 	
 file name.ext
 
-  flags:
+  Flags:
     --help     Show this help message
     --async    Flag for the program to run asynchronously
 `
