@@ -11,10 +11,8 @@ import (
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
-	"io"
 	"log"
 	"os"
-	"strconv"
 	"sync"
 )
 
@@ -147,32 +145,6 @@ func sendRequest(c grpcYoutubeThumbnails.YoutubeThumbnailsServiceClient, YouTube
 
 	write("%s\n", downloadThumbnailRes.Response)
 }
-
-func runForTest(in io.Reader, out io.Writer) {
-	scanner := bufio.NewScanner(in)
-
-	for scanner.Scan() {
-		if scanner.Text() == "STOP" || scanner.Text() == "stop" {
-			break
-		}
-		fmt.Println(scanner.Text())
-		n, err := strconv.ParseInt(scanner.Text(), 10, 64)
-
-		if err == nil {
-			fmt.Printf("Number formatted: %d\n", n)
-		} else {
-			fmt.Println(err.Error())
-		}
-	}
-}
-
-//func readFRom() {
-//	a := <-testChan
-//	fmt.Println(a + "from ch")
-//}
-//
-//var testChan chan string
-//var testChanErr chan error
 
 const usageMessage = `Please try to input YouTubeLink as a parameter:
 go run client/client.go [https://www.youtube.com/yourVideoID]
