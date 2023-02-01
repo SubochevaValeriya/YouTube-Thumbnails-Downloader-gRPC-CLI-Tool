@@ -64,26 +64,40 @@ func main() {
 
 	<-ch
 	// Closing connection with DB and stopping the server
+
 	fmt.Println()
-	fmt.Println("Closing MongoDB Connection")
+
+	// removing data from cache
+	if viper.GetString("drop_cache") == "yes" {
+		err := repository.DropCollection(context.Background())
+		if err != nil {
+			logrus.Errorf("cache data not deleted: %s", err)
+		} else {
+			logrus.Printf("Сache cleared successfully.")
+		}
+	}
+
+	logrus.Println("Closing MongoDB Connection")
 	if err := client.Disconnect(context.TODO()); err != nil {
 		log.Fatalf("Error on closing connection with MongoDB : %v", err)
 	}
-	fmt.Println("Stopping the server")
+	logrus.Println("Stopping the server")
 	s.Stop()
-	fmt.Println("End of Program")
+	logrus.Println("End of Program")
 }
 
 type server struct {
 	grpcYoutubeThumbnails.YoutubeThumbnailsServiceServer
 }
 
+// initialization configs for app
 func initConfig() error {
 	viper.AddConfigPath("configs")
 	viper.SetConfigName("config")
 	return viper.ReadInConfig()
 }
 
+// DownloadThumbnail function downloads thumbnails in the specific directory. If video data already is in the cache than uses thumbnail link from cache.
 func (s *server) DownloadThumbnail(ctx context.Context, req *grpcYoutubeThumbnails.DownloadThumbnailLinkRequest) (*grpcYoutubeThumbnails.DownloadThumbnailLinkResponse, error) {
 	video := internal.VideoItem{}
 	err := video.FindVideoID(req.URL)
@@ -93,9 +107,9 @@ func (s *server) DownloadThumbnail(ctx context.Context, req *grpcYoutubeThumbnai
 
 	data, err := repository.FindVideoByID(ctx, video.VideoID)
 	if err == nil {
-		logrus.Printf("Found in the cash")
+		logrus.Printf("Found in the cache: %s", req.URL)
 	} else {
-		logrus.Printf("Not found in the cash")
+		logrus.Printf("Not found in the cache: %s", req.URL)
 		data = &video
 		data.FindTitle(req.URL)
 
@@ -109,8 +123,7 @@ func (s *server) DownloadThumbnail(ctx context.Context, req *grpcYoutubeThumbnai
 			logrus.Printf("Can't add data to DB: %v", err)
 		}
 	}
-
-	log.Println("Download thumbnail")
+	logrus.Printf("Downloaded thumbnail for URL: %s", req.URL)
 
 	if internal.CreateFolder() != nil {
 		return &grpcYoutubeThumbnails.DownloadThumbnailLinkResponse{Response: fmt.Sprintf("Can't create directory for thumbnails")}, err
