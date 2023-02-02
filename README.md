@@ -25,7 +25,7 @@ go run client/client.go --async file urls.txt
 --async    Flag for the program to run asynchronously
 ```  
 
-### To run an app:
+### To run a server:
 
 ```
 make build && make run
